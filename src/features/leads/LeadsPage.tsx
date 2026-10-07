@@ -6,8 +6,9 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
+import { BuilderList } from './BuilderList';
 import { LeadForm } from './LeadForm';
-import { formatBudget, QUALITY_LABEL, type Lead, type Quality } from './types';
+import { CATEGORY_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type ProjectType, type Quality } from './types';
 
 export const QUALITY_TONE: Record<Quality, string> = {
   hot: 'bg-red-100 text-red-700',
@@ -33,7 +34,7 @@ export function LeadsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_sources(name), lead_statuses(name), lead_builders(builder_id, builders(name)), lead_locations(location_id, locations(name))')
+        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as Lead[];
@@ -55,9 +56,9 @@ export function LeadsPage() {
     return data.filter(
       (l) =>
         (!quality || l.quality === quality) &&
-        (!source || l.lead_source_id === source) &&
+        (!source || l.lead_source_links.some((x) => x.lead_source_id === source)) &&
         (!status || l.status_id === status) &&
-        (!type || l.project_type === type) &&
+        (!type || l.project_types.includes(type as ProjectType)) &&
         (!q ||
           l.contacts?.name.toLowerCase().includes(q) ||
           (digits && l.contacts?.contact_phones.some((p) => (p.country_code + p.number).includes(digits)))),
@@ -94,8 +95,7 @@ export function LeadsPage() {
         </select>
         <select aria-label="Project type" className={field} value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">All types</option>
-          <option value="apartment">Apartment</option>
-          <option value="villa">Villa</option>
+          {(Object.keys(PROJECT_TYPE_LABEL) as ProjectType[]).map((t) => <option key={t} value={t}>{PROJECT_TYPE_LABEL[t]}</option>)}
         </select>
       </div>
 
@@ -103,11 +103,11 @@ export function LeadsPage() {
       {error && <p role="alert" className="mb-3 text-sm text-red-600">Failed to load: {error.message}</p>}
       {del.error && <p role="alert" className="mb-3 text-sm text-red-600">Delete failed: {friendlyError(del.error)}</p>}
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="max-h-[calc(100vh-15rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
         <table className="w-full border-collapse text-sm">
-          <thead className="bg-slate-100">
+          <thead className="sticky top-0 z-10 bg-slate-100">
             <tr>
-              {['Name', 'Phone', 'Source', 'Type', 'Builders', 'Locations', 'Budget', 'Status', 'Quality', 'Enquiry', 'Added'].map((h) => (
+              {['Name', 'Phone', 'Source', 'Type', 'Category', 'Enquiry', 'Requirement', 'Locations', 'Budget', 'Status', 'Quality', 'Allocated Builders', 'Added'].map((h) => (
                 <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
               ))}
               {canWrite && <th className="w-24 px-4 py-2.5" />}
@@ -128,11 +128,11 @@ export function LeadsPage() {
                     </div>
                   ))}
                 </td>
-                <td className="px-4 py-2.5">{l.lead_sources?.name ?? '—'}</td>
-                <td className="px-4 py-2.5 capitalize">{l.project_type ?? '—'}</td>
-                <td className="px-4 py-2.5">
-                  {l.lead_builders.length ? l.lead_builders.map((x) => x.builders?.name).filter(Boolean).join(', ') : '—'}
-                </td>
+                <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
+                <td className="px-4 py-2.5">{l.project_types.length ? l.project_types.map((t) => PROJECT_TYPE_LABEL[t]).join(', ') : '—'}</td>
+                <td className="px-4 py-2.5">{l.categories.length ? l.categories.map((c) => CATEGORY_LABEL[c]).join(', ') : '—'}</td>
+                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.enquiry ?? '—'}</span></td>
+                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.requirement ?? '—'}</span></td>
                 <td className="px-4 py-2.5">
                   {l.lead_locations.length ? l.lead_locations.map((x) => x.locations?.name).filter(Boolean).join(', ') : '—'}
                 </td>
@@ -143,7 +143,7 @@ export function LeadsPage() {
                 <td className="px-4 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[l.quality]}`}>{QUALITY_LABEL[l.quality]}</span>
                 </td>
-                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.enquiry ?? '—'}</span></td>
+                <td className="px-4 py-2.5"><BuilderList builders={l.lead_builders} /></td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{new Date(l.created_at).toLocaleDateString()}</td>
                 {canWrite && (
                   <td className="px-4 py-2.5">

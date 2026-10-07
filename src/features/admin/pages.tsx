@@ -76,13 +76,13 @@ export function LeadSourcesPage() {
       singular="lead source"
       description="Where leads come from, e.g. Walk-in, Website, Referral. Drag to change the order they are listed in."
       table="lead_sources"
-      select="*, leads(count)"
+      select="*, lead_source_links(count)"
       order="sort_order"
       reorderable
       deleteWarning="Lead sources that are used by leads cannot be deleted."
       columns={[
         { header: 'Name', cell: (r) => <span className="font-medium">{r.name}</span> },
-        { header: 'Leads', cell: (r) => r.leads?.[0]?.count ?? 0 },
+        { header: 'Leads', cell: (r) => r.lead_source_links?.[0]?.count ?? 0 },
       ]}
       fields={[{ name: 'name', label: 'Name', kind: 'text', required: true }]}
     />

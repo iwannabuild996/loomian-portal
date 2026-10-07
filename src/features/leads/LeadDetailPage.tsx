@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { BuilderList } from './BuilderList';
 import { ArrowLeft, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
@@ -10,11 +11,11 @@ import { TaskForm } from '../tasks/TaskForm';
 import { dueGroup, formatDue, TASK_SELECT, type Task } from '../tasks/types';
 import { useTaskActions } from '../tasks/useTaskActions';
 import { LeadForm } from './LeadForm';
-import { formatBudget, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
+import { CATEGORY_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
 import { QUALITY_TONE } from './LeadsPage';
 
 const SELECT =
-  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_sources(name), lead_statuses(name), lead_builders(builder_id, builders(name)), lead_locations(location_id, locations(name))';
+  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -48,12 +49,12 @@ export function LeadDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('id, created_at, quality, project_type, enquiry')
+        .select('id, created_at, quality, project_types, enquiry')
         .eq('contact_id', lead!.contact_id)
         .neq('id', id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Pick<Lead, 'id' | 'created_at' | 'quality' | 'project_type' | 'enquiry'>[];
+      return data as Pick<Lead, 'id' | 'created_at' | 'quality' | 'project_types' | 'enquiry'>[];
     },
   });
 
@@ -81,7 +82,7 @@ export function LeadDetailPage() {
         .from('lead_status_log')
         .select('id, from_status, to_status, note, changed_at, profiles(full_name, email)')
         .eq('lead_id', id!)
-        .order('changed_at', { ascending: false });
+        .order('changed_at', { ascending: true });
       if (error) throw error;
       return data as unknown as StatusLogEntry[];
     },
@@ -264,10 +265,11 @@ export function LeadDetailPage() {
         <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="mb-3 font-semibold">Enquiry</h2>
           <dl className="grid gap-4 sm:grid-cols-2">
-            <Item label="Lead source">{lead.lead_sources?.name}</Item>
-            <Item label="Project type"><span className="capitalize">{lead.project_type}</span></Item>
+            <Item label="Lead source">{lead.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ')}</Item>
+            <Item label="Project type">{lead.project_types.map((t) => PROJECT_TYPE_LABEL[t]).join(', ')}</Item>
+            <Item label="Category">{lead.categories.map((c) => CATEGORY_LABEL[c]).join(', ')}</Item>
             <Item label="Budget">{formatBudget(lead.budget_min_lakhs, lead.budget_max_lakhs) === '—' ? null : formatBudget(lead.budget_min_lakhs, lead.budget_max_lakhs)}</Item>
-            <Item label="Builders">{lead.lead_builders.map((x) => x.builders?.name).filter(Boolean).join(', ')}</Item>
+            <Item label="Allocated Builders">{lead.lead_builders.length ? <BuilderList builders={lead.lead_builders} /> : null}</Item>
             <Item label="Preferred locations">{locations}</Item>
             <div className="sm:col-span-2"><Item label="Enquiry">{lead.enquiry}</Item></div>
             <div className="sm:col-span-2"><Item label="Requirement">{lead.requirement}</Item></div>

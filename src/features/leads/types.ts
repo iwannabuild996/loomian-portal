@@ -2,24 +2,39 @@ export type Quality = 'hot' | 'warm' | 'cold';
 
 export const QUALITY_LABEL: Record<Quality, string> = { hot: 'Hot', warm: 'Warm', cold: 'Cold' };
 
+export type ProjectType = 'apartment' | 'villa' | 'commercial_land' | 'residential_land' | 'office_space' | 'coworking';
+
+export const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
+  apartment: 'Apartment',
+  villa: 'Villa',
+  commercial_land: 'Commercial Land',
+  residential_land: 'Residential Land',
+  office_space: 'Office Space',
+  coworking: 'Coworking',
+};
+
+export type Category = 'project' | 'resale';
+
+export const CATEGORY_LABEL: Record<Category, string> = { project: 'Project', resale: 'Resale' };
+
 export type Phone = { id?: string; country_code: string; number: string; has_whatsapp: boolean };
 
 export type Lead = {
   id: string;
   contact_id: string;
   enquiry: string | null;
-  lead_source_id: string | null;
-  project_type: 'apartment' | 'villa' | null;
+  project_types: ProjectType[];
+  categories: Category[];
   requirement: string | null;
   budget_min_lakhs: number | null;
   budget_max_lakhs: number | null;
-  lead_builders: { builder_id: string; builders: { name: string } | null }[];
+  lead_builders: { builder_id: string; is_enquired: boolean; builders: { name: string } | null }[];
   lead_locations: { location_id: string; locations: { name: string } | null }[];
   quality: Quality;
   remarks: string | null;
   created_at: string;
   contacts: { name: string; email: string | null; contact_phones: Phone[] } | null;
-  lead_sources: { name: string } | null;
+  lead_source_links: { lead_source_id: string; lead_sources: { name: string } | null }[];
   status_id: string;
   lead_statuses: { name: string } | null;
 };

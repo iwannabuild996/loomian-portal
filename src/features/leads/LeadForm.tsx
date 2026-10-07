@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Star, Trash2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { COUNTRY_CODES, isValidPhone, normalizeNumber } from '../../lib/phone';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
-import { QUALITY_LABEL, type Lead, type Phone, type Quality } from './types';
+import { CATEGORY_LABEL, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Category, type Lead, type Phone, type ProjectType, type Quality } from './types';
 
 type Existing = { id: string; name: string; email: string | null };
 
@@ -18,13 +18,15 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
   const [email, setEmail] = useState(lead?.contacts?.email ?? '');
   const [phones, setPhones] = useState<Phone[]>(lead?.contacts?.contact_phones.length ? lead.contacts.contact_phones : [emptyPhone()]);
   const [enquiry, setEnquiry] = useState(lead?.enquiry ?? '');
-  const [sourceId, setSourceId] = useState(lead?.lead_source_id ?? '');
-  const [projectType, setProjectType] = useState(lead?.project_type ?? '');
+  const [sourceIds, setSourceIds] = useState<string[]>(lead?.lead_source_links.map((x) => x.lead_source_id) ?? []);
+  const [projectTypes, setProjectTypes] = useState<ProjectType[]>(lead?.project_types ?? []);
+  const [categories, setCategories] = useState<Category[]>(lead?.categories ?? []);
   const [requirement, setRequirement] = useState(lead?.requirement ?? '');
   const [budgetMin, setBudgetMin] = useState(lead?.budget_min_lakhs == null ? '' : String(lead.budget_min_lakhs));
   const [budgetMax, setBudgetMax] = useState(lead?.budget_max_lakhs == null ? '' : String(lead.budget_max_lakhs));
   const builders = useOptions('builders', 'name');
   const [builderIds, setBuilderIds] = useState<string[]>(lead?.lead_builders.map((x) => x.builder_id) ?? []);
+  const [enquiredIds, setEnquiredIds] = useState<string[]>(lead?.lead_builders.filter((x) => x.is_enquired).map((x) => x.builder_id) ?? []);
   const locations = useOptions('locations', 'name');
   const [locationIds, setLocationIds] = useState<string[]>(lead?.lead_locations.map((x) => x.location_id) ?? []);
   const [quality, setQuality] = useState<Quality>(lead?.quality ?? 'warm');
@@ -56,13 +58,15 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
         p_phones: phones.map(({ country_code, number, has_whatsapp }) => ({ country_code, number, has_whatsapp })),
         p_lead: {
           enquiry: enquiry.trim(),
-          lead_source_id: sourceId || null,
-          project_type: projectType || null,
+          lead_source_ids: sourceIds,
+          project_types: projectTypes,
           requirement: requirement.trim(),
+          categories,
           budget_min_lakhs: budgetMin.trim() ? Number(budgetMin) : null,
           budget_max_lakhs: budgetMax.trim() ? Number(budgetMax) : null,
           location_ids: locationIds,
           builder_ids: builderIds,
+          enquired_builder_ids: enquiredIds.filter((id) => builderIds.includes(id)),
           quality,
           remarks: remarks.trim(),
         },
@@ -163,19 +167,61 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="lead-source" className={label}>Lead source</label>
-            <select id="lead-source" className={field} value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-              <option value="">None</option>
-              {sources.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <span className={label}>Lead source</span>
+            <div className="flex flex-wrap gap-2">
+              {sources.map((s) => {
+                const on = sourceIds.includes(s.value);
+                return (
+                  <label key={s.value} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={on}
+                      onChange={() => setSourceIds((ids) => (on ? ids.filter((x) => x !== s.value) : [...ids, s.value]))}
+                    />
+                    {s.label}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div>
-            <label htmlFor="lead-type" className={label}>Project type</label>
-            <select id="lead-type" className={field} value={projectType} onChange={(e) => setProjectType(e.target.value as typeof projectType)}>
-              <option value="">None</option>
-              <option value="apartment">Apartment</option>
-              <option value="villa">Villa</option>
-            </select>
+            <span className={label}>Project type</span>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(PROJECT_TYPE_LABEL) as ProjectType[]).map((t) => {
+                const on = projectTypes.includes(t);
+                return (
+                  <label key={t} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={on}
+                      onChange={() => setProjectTypes((ts) => (on ? ts.filter((x) => x !== t) : [...ts, t]))}
+                    />
+                    {PROJECT_TYPE_LABEL[t]}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <span className={label}>Category</span>
+            <div className="flex gap-2">
+              {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => {
+                const on = categories.includes(c);
+                return (
+                  <label key={c} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={on}
+                      onChange={() => setCategories((cs) => (on ? cs.filter((x) => x !== c) : [...cs, c]))}
+                    />
+                    {CATEGORY_LABEL[c]}
+                  </label>
+                );
+              })}
+            </div>
           </div>
           <div>
             <span className={label}>Budget (lakhs)</span>
@@ -193,20 +239,36 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
           </div>
         </div>
         <div>
-          <span className={label}>Builders</span>
+          <span className={label}>Allocated Builders</span>
+          <p className="mb-2 text-xs text-slate-500">Select every builder for this lead, then star the ones the lead enquired about.</p>
           <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
             {builders.map((b) => {
               const on = builderIds.includes(b.value);
+              const enquired = enquiredIds.includes(b.value);
               return (
-                <label key={b.value} className={`cursor-pointer rounded-full border px-3 py-1 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={on}
-                    onChange={() => setBuilderIds((ids) => (on ? ids.filter((x) => x !== b.value) : [...ids, b.value]))}
-                  />
-                  {b.label}
-                </label>
+                <span key={b.value} className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
+                  <label className="cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={on}
+                      onChange={() => setBuilderIds((ids) => (on ? ids.filter((x) => x !== b.value) : [...ids, b.value]))}
+                    />
+                    {b.label}
+                  </label>
+                  {on && (
+                    <button
+                      type="button"
+                      aria-pressed={enquired}
+                      title={enquired ? 'Enquired by the lead (click to unmark)' : 'Mark as enquired by the lead'}
+                      onClick={() => setEnquiredIds((ids) => (enquired ? ids.filter((x) => x !== b.value) : [...ids, b.value]))}
+                      className={enquired ? 'text-amber-600' : 'text-slate-400 hover:text-amber-600'}
+                    >
+                      <Star className={`size-3.5 ${enquired ? 'fill-current' : ''}`} />
+                      <span className="sr-only">Enquired by the lead</span>
+                    </button>
+                  )}
+                </span>
               );
             })}
             {builders.length === 0 && <p className="text-sm text-slate-500">No builders yet. Add them under Admin → Builders.</p>}

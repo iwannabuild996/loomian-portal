@@ -9,6 +9,7 @@ import { AuditPage } from './features/admin/AuditPage';
 import { LeadsPage } from './features/leads/LeadsPage';
 import { LeadDetailPage } from './features/leads/LeadDetailPage';
 import { TasksPage } from './features/tasks/TasksPage';
+import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { BuildersPage, ConfigurationsPage, LeadSourcesPage, LeadStatusesPage, LocationsPage, TaskTypesPage, ProjectsPage, TypesPage, UsersPage } from './features/admin/pages';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ProjectDetailPage } from './features/projects/ProjectDetailPage';
@@ -29,6 +30,7 @@ export default function App() {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
+                <Route path="/meetings" element={<MeetingsPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route element={<RequireRole roles={['admin', 'editor']} />}>
