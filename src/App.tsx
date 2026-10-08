@@ -15,6 +15,7 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { ProjectDetailPage } from './features/projects/ProjectDetailPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 
+
 const queryClient = new QueryClient();
 
 export default function App() {
