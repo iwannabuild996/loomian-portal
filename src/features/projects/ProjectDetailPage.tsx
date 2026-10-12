@@ -5,6 +5,7 @@ import { ArrowLeft, ExternalLink, FileText } from 'lucide-react';
 import { AssetImage } from '../../components/AssetImage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatINR, formatPriceRange } from '../../lib/money';
+import { formatMonthYear } from '../../lib/month';
 import { assetUrl, isImagePath } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import type { Row } from '../admin/ResourcePage';
@@ -118,6 +119,7 @@ export function ProjectDetailPage() {
           <Fact label="Parking" value={formatINR(p.parking_charge)} />
           <Fact label="Registration" value={p.registration_pct == null ? 'NA' : `${p.registration_pct}%`} />
           <Fact label="Floor hike" value={p.floor_hike_per_floor == null ? 'NA' : `${p.floor_hike_per_floor} per floor`} />
+          <Fact label="Possession" value={formatMonthYear(p.possession_date)} />
           <Fact label="Total floors" value={dash(p.total_floor_count)} />
           <Fact label="Total units" value={dash(p.total_units)} />
           <Fact label="Types" value={String(types.length)} />

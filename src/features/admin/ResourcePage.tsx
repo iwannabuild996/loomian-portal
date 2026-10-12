@@ -18,7 +18,7 @@ export type Field = {
   name: string;
   label: string;
   /** 'custom' renders `render` and is not saved itself; it edits other fields through setValues. */
-  kind: 'text' | 'textarea' | 'number' | 'money' | 'select' | 'custom' | 'file';
+  kind: 'text' | 'textarea' | 'number' | 'money' | 'month' | 'select' | 'custom' | 'file';
   /** file fields: the column holds the storage path; folder groups uploads in the bucket */
   accept?: string;
   folder?: string;
@@ -73,6 +73,8 @@ function toInput(f: Field, value: unknown): string {
     const short = formatINR(value);
     return parsePriceRange(short)?.min === value ? short : String(value);
   }
+  // month fields hold a date (first of the month); the <input type="month"> wants YYYY-MM
+  if (f.kind === 'month') return String(value).slice(0, 7);
   return String(value);
 }
 
@@ -90,6 +92,10 @@ function fromInput(f: Field, raw: string): { value: unknown } | { error: string 
     const r = parsePriceRange(text);
     if (!r || r.min !== r.max) return { error: `${f.label}: enter one amount like 71 L, 1.06 Cr or 7100000` };
     return { value: r.min };
+  }
+  if (f.kind === 'month') {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(text)) return { error: `${f.label} must be a month and year` };
+    return { value: `${text}-01` };
   }
   return { value: text };
 }
@@ -214,6 +220,8 @@ function FormModal({ title, table, fields, row, onClose, nextOrder }: { title: s
                   <option value="">{f.required ? 'Select…' : 'None'}</option>
                   {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+              ) : f.kind === 'month' ? (
+                <input type="month" {...common} />
               ) : f.kind === 'number' ? (
                 <input type="number" step={f.integer ? 1 : 'any'} {...common} />
               ) : (

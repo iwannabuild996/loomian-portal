@@ -32,6 +32,7 @@ export type InventoryRow = {
   floor_plan_path: string | null;
   brochure_path: string | null;
   status: 'ready_to_move' | 'off_plan';
+  possession_date: string | null;
 };
 
 const KEY = ['inventory'];

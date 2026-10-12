@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { AssetImage } from '../../components/AssetImage';
 import { formatINR, parsePriceRange } from '../../lib/money';
+import { formatMonthYear } from '../../lib/month';
 import { assetUrl } from '../../lib/storage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useHideStock } from '../settings/useSettings';
@@ -183,7 +184,7 @@ export function InventoryPage() {
         <table className="w-full min-w-[1200px] border-collapse text-sm">
           <thead className="bg-slate-100">
             <tr>
-              {['Project', 'Location', 'Config', 'Type', 'Sqft', 'Available', 'Price', 'Sqft rate', 'Parking', 'Reg', 'Floor hike', 'USP'].filter((h) => !(hideStock && h === 'Available')).map((h) => (
+              {['Project', 'Location', 'Possession', 'Config', 'Type', 'Sqft', 'Available', 'Price', 'Sqft rate', 'Parking', 'Reg', 'Floor hike', 'USP'].filter((h) => !(hideStock && h === 'Available')).map((h) => (
                 <th key={h} className={th}>{h}</th>
               ))}
             </tr>
@@ -225,6 +226,7 @@ export function InventoryPage() {
                           </div>
                         </td>
                         <td rowSpan={rows.length} className={td}>{p.location}</td>
+                        <td rowSpan={rows.length} className={`${td} whitespace-nowrap`}>{formatMonthYear(p.possession_date)}</td>
                       </>
                     )}
                     <td className={td}>{r.config}</td>

@@ -11,7 +11,8 @@ import { TaskForm } from '../tasks/TaskForm';
 import { dueGroup, formatDue, TASK_SELECT, type Task } from '../tasks/types';
 import { useTaskActions } from '../tasks/useTaskActions';
 import { LeadForm } from './LeadForm';
-import { CATEGORY_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
+import { StatusLogForm } from './StatusLogForm';
+import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
 import { QUALITY_TONE } from './LeadsPage';
 
 const SELECT =
@@ -100,6 +101,8 @@ export function LeadDetailPage() {
     },
   });
 
+  const [logEdit, setLogEdit] = useState<StatusLogEntry | null>(null);
+
   if (isLoading) return <p className="text-slate-500">Loading…</p>;
   if (error) return <p role="alert" className="text-sm text-red-600">Failed to load: {error.message}</p>;
 
@@ -132,6 +135,36 @@ export function LeadDetailPage() {
 
       <div className="space-y-6">
         <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <h2 className="mb-3 font-semibold">Contact</h2>
+          <ul className="space-y-2 text-sm">
+            {lead.contacts?.contact_phones.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-3">
+                <a href={`tel:${p.country_code}${p.number}`} className="flex items-center gap-1 hover:underline">
+                  <Phone className="size-4 text-slate-500" /> {p.country_code} {p.number}
+                </a>
+                {p.has_whatsapp && (
+                  <a
+                    href={`https://wa.me/${p.country_code.slice(1)}${p.number}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-green-700 hover:underline"
+                  >
+                    <MessageCircle className="size-4" /> WhatsApp
+                  </a>
+                )}
+              </li>
+            ))}
+            {lead.contacts?.email && (
+              <li>
+                <a href={`mailto:${lead.contacts.email}`} className="flex items-center gap-1 hover:underline">
+                  <Mail className="size-4 text-slate-500" /> {lead.contacts.email}
+                </a>
+              </li>
+            )}
+          </ul>
+        </section>
+
+        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="mb-3 font-semibold">Status</h2>
           <p className="mb-3 text-sm">
             Current: <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{lead.lead_statuses?.name}</span>
@@ -160,6 +193,7 @@ export function LeadDetailPage() {
                   {['Date', 'Status', 'Notes', 'Changed by'].map((h) => (
                     <th key={h} className="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
                   ))}
+                  {canWrite && <th className="w-20 px-3 py-2" />}
                 </tr>
               </thead>
               <tbody>
@@ -171,10 +205,19 @@ export function LeadDetailPage() {
                     </td>
                     <td className="whitespace-pre-wrap px-3 py-2 text-slate-600">{e.note || '—'}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-600">{e.profiles?.full_name || e.profiles?.email || '—'}</td>
+                    {canWrite && (
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end">
+                          <button aria-label="Edit status change" onClick={() => setLogEdit(e)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200">
+                            <Pencil className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {log.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-500">No status changes yet.</td></tr>
+                  <tr><td colSpan={canWrite ? 5 : 4} className="px-3 py-4 text-center text-slate-500">No status changes yet.</td></tr>
                 )}
               </tbody>
             </table>
@@ -233,41 +276,12 @@ export function LeadDetailPage() {
         </section>
 
         <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <h2 className="mb-3 font-semibold">Contact</h2>
-          <ul className="space-y-2 text-sm">
-            {lead.contacts?.contact_phones.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center gap-3">
-                <a href={`tel:${p.country_code}${p.number}`} className="flex items-center gap-1 hover:underline">
-                  <Phone className="size-4 text-slate-500" /> {p.country_code} {p.number}
-                </a>
-                {p.has_whatsapp && (
-                  <a
-                    href={`https://wa.me/${p.country_code.slice(1)}${p.number}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-green-700 hover:underline"
-                  >
-                    <MessageCircle className="size-4" /> WhatsApp
-                  </a>
-                )}
-              </li>
-            ))}
-            {lead.contacts?.email && (
-              <li>
-                <a href={`mailto:${lead.contacts.email}`} className="flex items-center gap-1 hover:underline">
-                  <Mail className="size-4 text-slate-500" /> {lead.contacts.email}
-                </a>
-              </li>
-            )}
-          </ul>
-        </section>
-
-        <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
           <h2 className="mb-3 font-semibold">Enquiry</h2>
           <dl className="grid gap-4 sm:grid-cols-2">
             <Item label="Lead source">{lead.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ')}</Item>
             <Item label="Project type">{lead.project_types.map((t) => PROJECT_TYPE_LABEL[t]).join(', ')}</Item>
             <Item label="Category">{lead.categories.map((c) => CATEGORY_LABEL[c]).join(', ')}</Item>
+            <Item label="Project status">{lead.completion_types.map((c) => COMPLETION_LABEL[c]).join(', ')}</Item>
             <Item label="Budget">{formatBudget(lead.budget_min_lakhs, lead.budget_max_lakhs) === '—' ? null : formatBudget(lead.budget_min_lakhs, lead.budget_max_lakhs)}</Item>
             <Item label="Allocated Builders">{lead.lead_builders.length ? <BuilderList builders={lead.lead_builders} /> : null}</Item>
             <Item label="Preferred locations">{locations}</Item>
@@ -296,6 +310,7 @@ export function LeadDetailPage() {
       </div>
 
       {editing && <LeadForm lead={lead} onClose={() => setEditing(false)} />}
+      {logEdit && <StatusLogForm entry={logEdit} onClose={() => setLogEdit(null)} />}
       {taskForm && <TaskForm leadId={lead.id} task={taskForm === 'new' ? null : taskForm} onClose={() => setTaskForm(null)} />}
     </div>
   );

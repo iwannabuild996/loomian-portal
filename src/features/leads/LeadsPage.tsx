@@ -8,7 +8,7 @@ import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
 import { BuilderList } from './BuilderList';
 import { LeadForm } from './LeadForm';
-import { CATEGORY_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type ProjectType, type Quality } from './types';
+import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type ProjectType, type Quality } from './types';
 
 export const QUALITY_TONE: Record<Quality, string> = {
   hot: 'bg-red-100 text-red-700',
@@ -34,8 +34,10 @@ export function LeadsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
-        .order('created_at', { ascending: false });
+        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_status_log(note), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
+        .order('created_at', { ascending: false })
+        .order('changed_at', { referencedTable: 'lead_status_log', ascending: false })
+        .limit(1, { referencedTable: 'lead_status_log' });
       if (error) throw error;
       return data as unknown as Lead[];
     },
@@ -107,7 +109,7 @@ export function LeadsPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100">
             <tr>
-              {['Name', 'Phone', 'Source', 'Type', 'Category', 'Enquiry', 'Requirement', 'Locations', 'Budget', 'Status', 'Quality', 'Allocated Builders', 'Added'].map((h) => (
+              {['Name', 'Phone', 'Enquiry', 'Requirement', 'Status', 'Source', 'Type', 'Category', 'Project status', 'Locations', 'Budget', 'Quality', 'Allocated Builders', 'Added'].map((h) => (
                 <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
               ))}
               {canWrite && <th className="w-24 px-4 py-2.5" />}
@@ -128,18 +130,20 @@ export function LeadsPage() {
                     </div>
                   ))}
                 </td>
+                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.enquiry ?? '—'}</span></td>
+                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.requirement ?? '—'}</span></td>
+                <td className="px-4 py-2.5">
+                  <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{l.lead_statuses?.name}</span>
+                  {l.lead_status_log?.[0]?.note && <span className="mt-1 line-clamp-2 min-w-40 text-slate-600">{l.lead_status_log[0].note}</span>}
+                </td>
                 <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
                 <td className="px-4 py-2.5">{l.project_types.length ? l.project_types.map((t) => PROJECT_TYPE_LABEL[t]).join(', ') : '—'}</td>
                 <td className="px-4 py-2.5">{l.categories.length ? l.categories.map((c) => CATEGORY_LABEL[c]).join(', ') : '—'}</td>
-                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.enquiry ?? '—'}</span></td>
-                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.requirement ?? '—'}</span></td>
+                <td className="px-4 py-2.5">{l.completion_types.length ? l.completion_types.map((c) => COMPLETION_LABEL[c]).join(', ') : '—'}</td>
                 <td className="px-4 py-2.5">
                   {l.lead_locations.length ? l.lead_locations.map((x) => x.locations?.name).filter(Boolean).join(', ') : '—'}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5">{formatBudget(l.budget_min_lakhs, l.budget_max_lakhs)}</td>
-                <td className="whitespace-nowrap px-4 py-2.5">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{l.lead_statuses?.name}</span>
-                </td>
                 <td className="px-4 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[l.quality]}`}>{QUALITY_LABEL[l.quality]}</span>
                 </td>

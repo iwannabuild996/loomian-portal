@@ -17,6 +17,10 @@ export type Category = 'project' | 'resale';
 
 export const CATEGORY_LABEL: Record<Category, string> = { project: 'Project', resale: 'Resale' };
 
+export type CompletionType = 'off_plan' | 'ready_to_move';
+
+export const COMPLETION_LABEL: Record<CompletionType, string> = { off_plan: 'Off-plan', ready_to_move: 'Ready to move in' };
+
 export type Phone = { id?: string; country_code: string; number: string; has_whatsapp: boolean };
 
 export type Lead = {
@@ -25,6 +29,7 @@ export type Lead = {
   enquiry: string | null;
   project_types: ProjectType[];
   categories: Category[];
+  completion_types: CompletionType[];
   requirement: string | null;
   budget_min_lakhs: number | null;
   budget_max_lakhs: number | null;
@@ -37,6 +42,8 @@ export type Lead = {
   lead_source_links: { lead_source_id: string; lead_sources: { name: string } | null }[];
   status_id: string;
   lead_statuses: { name: string } | null;
+  /** Only the latest entry is loaded on the leads list: its note belongs to the current status. */
+  lead_status_log?: { note: string | null }[];
 };
 
 export type StatusLogEntry = {

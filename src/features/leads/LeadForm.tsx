@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { COUNTRY_CODES, isValidPhone, normalizeNumber } from '../../lib/phone';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
-import { CATEGORY_LABEL, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Category, type Lead, type Phone, type ProjectType, type Quality } from './types';
+import { CATEGORY_LABEL, COMPLETION_LABEL, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Category, type CompletionType, type Lead, type Phone, type ProjectType, type Quality } from './types';
 
 type Existing = { id: string; name: string; email: string | null };
 
@@ -21,6 +21,7 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
   const [sourceIds, setSourceIds] = useState<string[]>(lead?.lead_source_links.map((x) => x.lead_source_id) ?? []);
   const [projectTypes, setProjectTypes] = useState<ProjectType[]>(lead?.project_types ?? []);
   const [categories, setCategories] = useState<Category[]>(lead?.categories ?? []);
+  const [completionTypes, setCompletionTypes] = useState<CompletionType[]>(lead?.completion_types ?? []);
   const [requirement, setRequirement] = useState(lead?.requirement ?? '');
   const [budgetMin, setBudgetMin] = useState(lead?.budget_min_lakhs == null ? '' : String(lead.budget_min_lakhs));
   const [budgetMax, setBudgetMax] = useState(lead?.budget_max_lakhs == null ? '' : String(lead.budget_max_lakhs));
@@ -62,6 +63,7 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
           project_types: projectTypes,
           requirement: requirement.trim(),
           categories,
+          completion_types: completionTypes,
           budget_min_lakhs: budgetMin.trim() ? Number(budgetMin) : null,
           budget_max_lakhs: budgetMax.trim() ? Number(budgetMax) : null,
           location_ids: locationIds,
@@ -218,6 +220,25 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
                       onChange={() => setCategories((cs) => (on ? cs.filter((x) => x !== c) : [...cs, c]))}
                     />
                     {CATEGORY_LABEL[c]}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <span className={label}>Project status</span>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(COMPLETION_LABEL) as CompletionType[]).map((c) => {
+                const on = completionTypes.includes(c);
+                return (
+                  <label key={c} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${on ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-300'}`}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={on}
+                      onChange={() => setCompletionTypes((cs) => (on ? cs.filter((x) => x !== c) : [...cs, c]))}
+                    />
+                    {COMPLETION_LABEL[c]}
                   </label>
                 );
               })}

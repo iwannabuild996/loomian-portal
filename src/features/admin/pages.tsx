@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { AssetImage } from '../../components/AssetImage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatINR } from '../../lib/money';
+import { formatMonthYear } from '../../lib/month';
 import { assetUrl } from '../../lib/storage';
 import { useAuth } from '../auth/AuthProvider';
 import { ResourcePage } from './ResourcePage';
@@ -182,6 +183,7 @@ export function ProjectsPage() {
         { header: 'Map', cell: (r) => (r.latitude == null ? '—' : `${r.latitude}, ${r.longitude}`) },
         { header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
         { header: 'Kind', cell: (r) => <span className="capitalize">{r.property_type}</span> },
+        { header: 'Possession', cell: (r) => <span className="whitespace-nowrap">{formatMonthYear(r.possession_date)}</span> },
         { header: 'Floors', cell: (r) => dash(r.total_floor_count) },
         { header: 'Units', cell: (r) => dash(r.total_units) },
         { header: 'Parking', cell: (r) => formatINR(r.parking_charge) },
@@ -223,6 +225,7 @@ export function ProjectsPage() {
             { value: 'off_plan', label: 'Off-plan' },
           ],
         },
+        { name: 'possession_date', label: 'Possession', kind: 'month', hint: 'Month and year the project is handed over. Leave empty if not known.' },
         { name: 'total_floor_count', label: 'Total floors', kind: 'number', integer: true, hint: 'Leave empty for villas.' },
         { name: 'total_units', label: 'Total units', kind: 'number', integer: true },
         { name: 'latitude', label: 'Latitude', kind: 'number', hint: 'In Google Maps, right-click the site and click the coordinates to copy them, e.g. 10.015900, 76.341900.' },
