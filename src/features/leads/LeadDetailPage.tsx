@@ -311,7 +311,7 @@ export function LeadDetailPage() {
 
       {editing && <LeadForm lead={lead} onClose={() => setEditing(false)} />}
       {logEdit && <StatusLogForm entry={logEdit} onClose={() => setLogEdit(null)} />}
-      {taskForm && <TaskForm leadId={lead.id} task={taskForm === 'new' ? null : taskForm} onClose={() => setTaskForm(null)} />}
+      {taskForm && <TaskForm fixedLeadId={lead.id} task={taskForm === 'new' ? null : taskForm} onClose={() => setTaskForm(null)} />}
     </div>
   );
 }

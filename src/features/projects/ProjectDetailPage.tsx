@@ -6,6 +6,7 @@ import { AssetImage } from '../../components/AssetImage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatINR, formatPriceRange } from '../../lib/money';
 import { formatMonthYear } from '../../lib/month';
+import { PROPERTY_TYPE_LABEL, type PropertyType } from '../../lib/propertyType';
 import { assetUrl, isImagePath } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import type { Row } from '../admin/ResourcePage';
@@ -103,7 +104,7 @@ export function ProjectDetailPage() {
               {p.builders?.name ?? 'No builder'}
             </span>
             <span>· {p.locations?.name}</span>
-            <span>· {p.property_type === 'villa' ? 'Villa' : 'Apartment'}</span>
+            <span>· {PROPERTY_TYPE_LABEL[p.property_type as PropertyType]}</span>
           </div>
           {p.usp && <p className="text-slate-700">{p.usp}</p>}
           {canEdit && (

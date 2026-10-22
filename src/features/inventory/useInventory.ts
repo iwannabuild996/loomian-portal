@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { PropertyType } from '../../lib/propertyType';
 import { supabase } from '../../lib/supabase';
 
 export type InventoryRow = {
@@ -22,7 +23,7 @@ export type InventoryRow = {
   sqft: number | null;
   price: number | null;
   sqft_rate: number | null;
-  property_type: 'apartment' | 'villa';
+  property_type: PropertyType;
   total_floor_count: number | null;
   total_units: number | null;
   latitude: number | null;

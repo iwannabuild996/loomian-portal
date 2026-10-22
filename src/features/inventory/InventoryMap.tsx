@@ -5,6 +5,7 @@ import { latLngBounds, type LatLngTuple } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AssetImage } from '../../components/AssetImage';
 import { formatPriceRange } from '../../lib/money';
+import { PROPERTY_TYPE_LABEL } from '../../lib/propertyType';
 import { assetUrl } from '../../lib/storage';
 import { StatusBadge } from '../../components/StatusBadge';
 import type { InventoryRow } from './useInventory';
@@ -74,7 +75,7 @@ export default function InventoryMap({ groups, hideStock }: { groups: InventoryR
                       <StatusBadge status={p.status} />
                     </div>
                     <div className="text-slate-500">
-                      {[p.builder, p.location, p.property_type === 'villa' ? 'Villa' : 'Apartment'].filter(Boolean).join(' · ')}
+                      {[p.builder, p.location, PROPERTY_TYPE_LABEL[p.property_type]].filter(Boolean).join(' · ')}
                     </div>
                     <ul className="mt-2 space-y-0.5">
                       {configSummary(rows).map((c) => (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
@@ -22,7 +22,7 @@ export function TasksPage() {
   const types = useOptions('task_types', 'name', 'sort_order');
   const [tab, setTab] = useState<'pending' | 'done'>('pending');
   const [typeId, setTypeId] = useState('');
-  const [editing, setEditing] = useState<Task | null>(null);
+  const [editing, setEditing] = useState<Task | 'new' | null>(null);
   const { toggle, remove } = useTaskActions();
 
   const { data = [], isLoading, error } = useQuery({
@@ -54,7 +54,9 @@ export function TasksPage() {
       <td className="whitespace-nowrap px-4 py-2.5">{formatDue(t.due_at)}</td>
       <td className="px-4 py-2.5 font-medium">{t.task_types?.name}</td>
       <td className="px-4 py-2.5">
-        <Link to={`/leads/${t.lead_id}`} className="text-indigo-600 hover:underline">{t.leads?.contacts?.name ?? 'Lead'}</Link>
+        {t.lead_id
+          ? <Link to={`/leads/${t.lead_id}`} className="text-indigo-600 hover:underline">{t.leads?.contacts?.name ?? 'Lead'}</Link>
+          : <span className="text-slate-400">—</span>}
       </td>
       <td className="whitespace-pre-wrap px-4 py-2.5 text-slate-600">{t.notes || '—'}</td>
       {canWrite && (
@@ -88,9 +90,16 @@ export function TasksPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Tasks</h1>
-        <p className="text-sm text-slate-500">Site visits, calls and other to-dos across all leads. Add a task from a lead's page.</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Tasks</h1>
+          <p className="text-sm text-slate-500">Site visits, calls and other to-dos. A task can be linked to a lead or stand on its own.</p>
+        </div>
+        {canWrite && (
+          <button onClick={() => setEditing('new')} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            <Plus className="size-4" /> Add task
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -138,7 +147,7 @@ export function TasksPage() {
         </div>
       )}
 
-      {editing && <TaskForm leadId={editing.lead_id} task={editing} onClose={() => setEditing(null)} />}
+      {editing && <TaskForm task={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }

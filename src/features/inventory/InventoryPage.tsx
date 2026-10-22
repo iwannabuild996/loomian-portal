@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { AssetImage } from '../../components/AssetImage';
 import { formatINR, parsePriceRange } from '../../lib/money';
 import { formatMonthYear } from '../../lib/month';
+import { PROPERTY_TYPE_LABEL, type PropertyType } from '../../lib/propertyType';
 import { assetUrl } from '../../lib/storage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useHideStock } from '../settings/useSettings';
@@ -136,9 +137,8 @@ export function InventoryPage() {
           {configs.map((c) => <option key={c}>{c}</option>)}
         </select>
         <select className={field} value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="">Apartments &amp; villas</option>
-          <option value="apartment">Apartments</option>
-          <option value="villa">Villas</option>
+          <option value="">All kinds</option>
+          {(Object.keys(PROPERTY_TYPE_LABEL) as PropertyType[]).map((t) => <option key={t} value={t}>{PROPERTY_TYPE_LABEL[t]}</option>)}
         </select>
         <select className={field} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
@@ -211,7 +211,7 @@ export function InventoryPage() {
                               </div>
                               <div className="text-xs text-slate-400">
                                 {[
-                                  p.property_type === 'villa' ? 'Villa' : 'Apartment',
+                                  PROPERTY_TYPE_LABEL[p.property_type],
                                   p.total_floor_count && `${p.total_floor_count} floors`,
                                   p.total_units && `${p.total_units} units`,
                                 ].filter(Boolean).join(' · ')}

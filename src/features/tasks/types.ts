@@ -1,6 +1,6 @@
 export type Task = {
   id: string;
-  lead_id: string;
+  lead_id: string | null;
   task_type_id: string;
   due_at: string;
   notes: string | null;

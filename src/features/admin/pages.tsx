@@ -5,6 +5,7 @@ import { AssetImage } from '../../components/AssetImage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatINR } from '../../lib/money';
 import { formatMonthYear } from '../../lib/month';
+import { PROPERTY_TYPE_LABEL, type PropertyType } from '../../lib/propertyType';
 import { assetUrl } from '../../lib/storage';
 import { useAuth } from '../auth/AuthProvider';
 import { ResourcePage } from './ResourcePage';
@@ -182,7 +183,7 @@ export function ProjectsPage() {
         { header: 'Location', cell: (r) => r.locations?.name },
         { header: 'Map', cell: (r) => (r.latitude == null ? '—' : `${r.latitude}, ${r.longitude}`) },
         { header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
-        { header: 'Kind', cell: (r) => <span className="capitalize">{r.property_type}</span> },
+        { header: 'Kind', cell: (r) => {PROPERTY_TYPE_LABEL[r.property_type as PropertyType] ?? r.property_type} },
         { header: 'Possession', cell: (r) => <span className="whitespace-nowrap">{formatMonthYear(r.possession_date)}</span> },
         { header: 'Floors', cell: (r) => dash(r.total_floor_count) },
         { header: 'Units', cell: (r) => dash(r.total_units) },
@@ -209,10 +210,7 @@ export function ProjectsPage() {
           kind: 'select',
           required: true,
           defaultValue: 'apartment',
-          options: [
-            { value: 'apartment', label: 'Apartment' },
-            { value: 'villa', label: 'Villa' },
-          ],
+          options: (Object.keys(PROPERTY_TYPE_LABEL) as PropertyType[]).map((value) => ({ value, label: PROPERTY_TYPE_LABEL[value] })),
         },
         {
           name: 'status',
