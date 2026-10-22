@@ -2,13 +2,15 @@ export type Quality = 'hot' | 'warm' | 'cold';
 
 export const QUALITY_LABEL: Record<Quality, string> = { hot: 'Hot', warm: 'Warm', cold: 'Cold' };
 
-export type ProjectType = 'apartment' | 'villa' | 'commercial_land' | 'residential_land' | 'office_space' | 'coworking';
+export type ProjectType = 'apartment' | 'villa' | 'commercial_land' | 'residential_land' | 'agricultural_land' | 'building' | 'office_space' | 'coworking';
 
 export const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
   apartment: 'Apartment',
   villa: 'Villa',
   commercial_land: 'Commercial Land',
   residential_land: 'Residential Land',
+  agricultural_land: 'Agricultural Land',
+  building: 'Building',
   office_space: 'Office Space',
   coworking: 'Coworking',
 };
