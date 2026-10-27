@@ -67,7 +67,7 @@ export function friendlyError(e: unknown): string {
   return err?.message ?? 'Something went wrong';
 }
 
-function toInput(f: Field, value: unknown): string {
+export function toInput(f: Field, value: unknown): string {
   if (value == null) return '';
   if (f.kind === 'money' && typeof value === 'number') {
     const short = formatINR(value);
@@ -78,7 +78,7 @@ function toInput(f: Field, value: unknown): string {
   return String(value);
 }
 
-function fromInput(f: Field, raw: string): { value: unknown } | { error: string } {
+export function fromInput(f: Field, raw: string): { value: unknown } | { error: string } {
   const text = raw.trim();
   if (!text) return f.required ? { error: `${f.label} is required` } : { value: null };
   if (f.kind === 'number') {
@@ -100,7 +100,7 @@ function fromInput(f: Field, raw: string): { value: unknown } | { error: string 
   return { value: text };
 }
 
-function FormModal({ title, table, fields, row, onClose, nextOrder }: { title: string; table: string; fields: Field[]; row: Row | null; onClose: () => void; nextOrder?: number }) {
+export function FormModal({ title, table, fields, row, onClose, nextOrder, fixed }: { title: string; table: string; fields: Field[]; row: Row | null; onClose: () => void; nextOrder?: number; fixed?: Row }) {
   const qc = useQueryClient();
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(fields.map((f) => [f.name, row ? toInput(f, row[f.name]) : f.defaultValue ?? ''])),
@@ -148,7 +148,7 @@ function FormModal({ title, table, fields, row, onClose, nextOrder }: { title: s
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const payload: Row = {};
+    const payload: Row = { ...(row ? {} : fixed) };
     for (const f of fields) {
       if (f.kind === 'custom' || f.kind === 'file' || f.disabled?.(row)) continue;
       const r = fromInput(f, values[f.name]);

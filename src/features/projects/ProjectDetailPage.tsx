@@ -1,15 +1,16 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ExternalLink, FileText } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, ExternalLink, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import { AssetImage } from '../../components/AssetImage';
 import { StatusBadge } from '../../components/StatusBadge';
 import { formatINR, formatPriceRange } from '../../lib/money';
 import { formatMonthYear } from '../../lib/month';
 import { PROPERTY_TYPE_LABEL, type PropertyType } from '../../lib/propertyType';
-import { assetUrl, isImagePath } from '../../lib/storage';
+import { assetUrl, isImagePath, removeAssets } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
-import type { Row } from '../admin/ResourcePage';
+import { FormModal, friendlyError, type Row } from '../admin/ResourcePage';
+import { useTypeFields } from '../admin/typeFields';
 import { useAuth } from '../auth/AuthProvider';
 import { useHideStock } from '../settings/useSettings';
 import { FileSection } from './FileSection';
@@ -34,6 +35,18 @@ export function ProjectDetailPage() {
   const { role } = useAuth();
   const hideStock = useHideStock();
   const canEdit = role === 'admin' || role === 'editor';
+  const qc = useQueryClient();
+  const typeFields = useTypeFields(false);
+  const [editingType, setEditingType] = useState<Row | 'new' | null>(null);
+  const delType = useMutation({
+    mutationFn: async (t: Row) => {
+      const { data, error } = await supabase.from('unit_types').delete().eq('id', t.id).select('id');
+      if (error) throw error;
+      if (!data?.length) throw new Error('Not permitted, or the type no longer exists.');
+      await removeAssets([t.layout_path]);
+    },
+    onSuccess: () => qc.invalidateQueries(),
+  });
   const [viewer, setViewer] = useState<{ items: LightboxItem[]; index: number } | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -129,15 +142,23 @@ export function ProjectDetailPage() {
       </section>
 
       <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-        <h2 className="mb-3 font-semibold">Types &amp; layouts</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Types &amp; layouts</h2>
+          {canEdit && (
+            <button onClick={() => setEditingType('new')} className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+              <Plus className="size-4" /> Add type
+            </button>
+          )}
+        </div>
+        {delType.error && <p role="alert" className="mb-2 text-sm text-red-600">Delete failed: {friendlyError(delType.error)}</p>}
         {groups.length === 0 ? (
-          <p className="text-sm text-slate-500">No types added yet. Add them on the Types admin page.</p>
+          <p className="text-sm text-slate-500">No types added yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] border-collapse text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
-                  {['Layout', 'Type', 'Sqft', 'Price', 'Sqft rate', ...(hideStock ? [] : ['Available'])].map((h) => (
+                  {['Layout', 'Type', 'Sqft', 'Price', 'Sqft rate', ...(hideStock ? [] : ['Available']), ...(canEdit ? [''] : [])].map((h) => (
                     <th key={h} className="px-3 py-2">{h}</th>
                   ))}
                 </tr>
@@ -145,7 +166,7 @@ export function ProjectDetailPage() {
               {groups.map(([config, list]) => (
                 <tbody key={config}>
                   <tr>
-                    <th colSpan={hideStock ? 5 : 6} className="bg-slate-100 px-3 py-1.5 text-left text-sm font-semibold">
+                    <th colSpan={(hideStock ? 5 : 6) + (canEdit ? 1 : 0)} className="bg-slate-100 px-3 py-1.5 text-left text-sm font-semibold">
                       {config} <span className="font-normal text-slate-500">· {list.length} type{list.length === 1 ? '' : 's'}</span>
                     </th>
                   </tr>
@@ -174,6 +195,20 @@ export function ProjectDetailPage() {
                           <td className="px-3 py-2">
                             {t.available_count}
                             {t.available_count === 0 && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Sold out</span>}
+                          </td>
+                        )}
+                        {canEdit && (
+                          <td className="px-3 py-2">
+                            <div className="flex justify-end gap-1">
+                              <button aria-label={`Edit Type ${t.type_name}`} onClick={() => setEditingType(t)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200"><Pencil className="size-4" /></button>
+                              <button
+                                aria-label={`Delete Type ${t.type_name}`}
+                                onClick={() => window.confirm(`Delete Type ${t.type_name}?`) && delType.mutate(t)}
+                                className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -207,6 +242,17 @@ export function ProjectDetailPage() {
             <ProjectLocationMap lat={Number(p.latitude)} lng={Number(p.longitude)} />
           </Suspense>
         </section>
+      )}
+
+      {editingType && (
+        <FormModal
+          title={editingType === 'new' ? 'Add type' : `Edit Type ${editingType.type_name}`}
+          table="unit_types"
+          fields={typeFields}
+          row={editingType === 'new' ? null : editingType}
+          fixed={{ project_id: p.id }}
+          onClose={() => setEditingType(null)}
+        />
       )}
 
       {viewer && <Lightbox items={viewer.items} index={viewer.index} onIndex={(i) => setViewer({ ...viewer, index: i })} onClose={() => setViewer(null)} />}

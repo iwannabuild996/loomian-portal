@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Building2, CalendarCheck, CalendarClock, ClipboardList, HardHat, History, Layers, PhoneCall, LayoutGrid, ListChecks, LogOut, MapPin, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Ruler, Settings, Target, Users, X, type LucideIcon } from 'lucide-react';
+import { Building2, CalendarCheck, CalendarClock, ClipboardList, HardHat, History, Layers, PhoneCall, Table2, FileUp, LayoutGrid, ListChecks, LogOut, MapPin, Megaphone, Menu, PanelLeftClose, PanelLeftOpen, Ruler, Settings, Target, Users, X, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth, type Role } from '../features/auth/AuthProvider';
 
@@ -14,6 +14,8 @@ const nav: NavItem[] = [
 
 const admin: NavItem[] = [
   { to: '/calls', label: 'Calls', icon: PhoneCall },
+  { to: '/admin/inventory-sheet', label: 'Inventory sheet', icon: Table2 },
+  { to: '/admin/import', label: 'Import', icon: FileUp },
   { to: '/admin/projects', label: 'Projects', icon: LayoutGrid },
   { to: '/admin/types', label: 'Types', icon: Ruler },
   { to: '/admin/builders', label: 'Builders', icon: HardHat },

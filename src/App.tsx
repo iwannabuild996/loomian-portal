@@ -11,6 +11,8 @@ import { LeadDetailPage } from './features/leads/LeadDetailPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { BuildersPage, ConfigurationsPage, LeadSourcesPage, LeadStatusesPage, LocationsPage, TaskTypesPage, ProjectsPage, TypesPage, UsersPage } from './features/admin/pages';
+import { InventorySheetPage } from './features/admin/InventorySheetPage';
+import { ImportPage } from './features/admin/importer/ImportPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ProjectDetailPage } from './features/projects/ProjectDetailPage';
 import { CallsPage } from './features/calls/CallsPage';
@@ -36,6 +38,8 @@ export default function App() {
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route element={<RequireRole roles={['admin', 'editor']} />}>
+                  <Route path="/admin/inventory-sheet" element={<InventorySheetPage />} />
+                  <Route path="/admin/import" element={<ImportPage />} />
                   <Route path="/admin/projects" element={<ProjectsPage />} />
                   <Route path="/admin/types" element={<TypesPage />} />
                   <Route path="/admin/builders" element={<BuildersPage />} />

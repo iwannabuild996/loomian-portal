@@ -64,6 +64,7 @@ export function usePlayer() {
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [rate, setRateState] = useState(1);
 
   useEffect(() => {
     const a = new Audio();
@@ -114,6 +115,9 @@ export function usePlayer() {
       urls.current.set(rec.id, url);
     }
     a.src = url;
+    // A new src resets the speed to the default, so apply the chosen one again.
+    a.defaultPlaybackRate = rate;
+    a.playbackRate = rate;
     try {
       await a.play();
     } catch {
@@ -127,9 +131,19 @@ export function usePlayer() {
     setTime(t);
   };
 
-  return { id, playing, loading, time, duration, error, toggle, seek, url: (rid: string) => urls.current.get(rid) };
+  const setRate = (r: number) => {
+    setRateState(r);
+    if (audio.current) {
+      audio.current.defaultPlaybackRate = r;
+      audio.current.playbackRate = r;
+    }
+  };
+
+  return { id, playing, loading, time, duration, error, rate, setRate, toggle, seek, url: (rid: string) => urls.current.get(rid) };
 }
 type Player = ReturnType<typeof usePlayer>;
+
+const SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -161,6 +175,9 @@ export function RecordingPlayer({ rec, player }: { rec: CallRecording; player: P
               onChange={(e) => player.seek(Number(e.target.value))}
             />
             <span className="w-20 text-xs tabular-nums text-slate-500">{clock(player.time)} / {clock(player.duration)}</span>
+            <select aria-label="Playback speed" value={player.rate} onChange={(e) => player.setRate(Number(e.target.value))} className="rounded border border-slate-300 bg-white px-1 py-0.5 text-xs">
+              {SPEEDS.map((r) => <option key={r} value={r}>{r}x</option>)}
+            </select>
             {url && <a href={url} download aria-label="Download recording" className="rounded p-1.5 text-slate-500 hover:bg-slate-200"><Download className="size-4" /></a>}
           </>
         )}
