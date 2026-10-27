@@ -13,6 +13,7 @@ import { MeetingsPage } from './features/meetings/MeetingsPage';
 import { BuildersPage, ConfigurationsPage, LeadSourcesPage, LeadStatusesPage, LocationsPage, TaskTypesPage, ProjectsPage, TypesPage, UsersPage } from './features/admin/pages';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ProjectDetailPage } from './features/projects/ProjectDetailPage';
+import { CallsPage } from './features/calls/CallsPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 
 
@@ -43,6 +44,7 @@ export default function App() {
                   <Route path="/admin/lead-statuses" element={<LeadStatusesPage />} />
                   <Route path="/admin/task-types" element={<TaskTypesPage />} />
                   <Route path="/admin/configurations" element={<ConfigurationsPage />} />
+                  <Route path="/calls" element={<CallsPage />} />
                   <Route path="/admin/audit" element={<AuditPage />} />
                 </Route>
                 <Route element={<RequireRole roles={['admin']} />}>

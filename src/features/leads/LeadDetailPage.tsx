@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BuilderList } from './BuilderList';
 import { ArrowLeft, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { useOptions } from '../admin/useOptions';
 import { TaskForm } from '../tasks/TaskForm';
 import { dueGroup, formatDue, TASK_SELECT, type Task } from '../tasks/types';
 import { useTaskActions } from '../tasks/useTaskActions';
+import { LeadCallRecordings } from '../calls/LeadCallRecordings';
 import { LeadForm } from './LeadForm';
 import { StatusLogForm } from './StatusLogForm';
 import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
@@ -29,6 +30,7 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
 
 export function LeadDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { role } = useAuth();
   const canWrite = role === 'admin' || role === 'editor';
   const [editing, setEditing] = useState(false);
@@ -107,9 +109,12 @@ export function LeadDetailPage() {
   if (error) return <p role="alert" className="text-sm text-red-600">Failed to load: {error.message}</p>;
 
   const back = (
-    <Link to="/leads" className="mb-4 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline">
-      <ArrowLeft className="size-4" /> All leads
-    </Link>
+    <button
+      onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/leads'))}
+      className="mb-4 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+    >
+      <ArrowLeft className="size-4" /> Back
+    </button>
   );
   if (!lead) return <div className="mx-auto max-w-4xl">{back}<p className="text-slate-500">Lead not found.</p></div>;
 
@@ -290,6 +295,10 @@ export function LeadDetailPage() {
             <div className="sm:col-span-2"><Item label="Remarks">{lead.remarks}</Item></div>
           </dl>
         </section>
+
+        {canWrite && (
+          <LeadCallRecordings phones={lead.contacts?.contact_phones.map((p) => p.country_code + p.number) ?? []} />
+        )}
 
         {others.length > 0 && (
           <section className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
