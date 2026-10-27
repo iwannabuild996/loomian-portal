@@ -11,7 +11,7 @@ import {
 
 const PAGE = 500;
 
-const TYPE_ICON: Record<CallType, { icon: LucideIcon; tone: string }> = {
+export const TYPE_ICON: Record<CallType, { icon: LucideIcon; tone: string }> = {
   inbound: { icon: PhoneIncoming, tone: 'text-emerald-600' },
   outbound: { icon: PhoneOutgoing, tone: 'text-indigo-600' },
   missed: { icon: PhoneMissed, tone: 'text-red-600' },

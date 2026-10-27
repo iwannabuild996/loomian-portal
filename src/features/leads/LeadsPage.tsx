@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
@@ -16,6 +16,8 @@ export const QUALITY_TONE: Record<Quality, string> = {
   cold: 'bg-sky-100 text-sky-700',
 };
 
+const PAGE_SIZES = [25, 50, 100, 200];
+
 export function LeadsPage() {
   const qc = useQueryClient();
   const { role } = useAuth();
@@ -28,6 +30,8 @@ export function LeadsPage() {
   const [status, setStatus] = useState('');
   const statuses = useOptions('lead_statuses', 'name', 'sort_order');
   const [type, setType] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
 
   const { data = [], isLoading, error } = useQuery({
     queryKey: ['leads'],
@@ -67,6 +71,13 @@ export function LeadsPage() {
     );
   }, [data, search, quality, source, status, type]);
 
+  useEffect(() => setPage(1), [search, quality, source, status, type, pageSize]);
+
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const current = Math.min(page, pages);
+  const start = (current - 1) * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -105,7 +116,7 @@ export function LeadsPage() {
       {error && <p role="alert" className="mb-3 text-sm text-red-600">Failed to load: {error.message}</p>}
       {del.error && <p role="alert" className="mb-3 text-sm text-red-600">Delete failed: {friendlyError(del.error)}</p>}
 
-      <div className="max-h-[calc(100vh-15rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+      <div className="max-h-[calc(100vh-19rem)] overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100">
             <tr>
@@ -116,7 +127,7 @@ export function LeadsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((l) => (
+            {pageRows.map((l) => (
               <tr key={l.id} className="border-t border-slate-200 align-top hover:bg-slate-50">
                 <td className="px-4 py-2.5">
                   <Link to={`/leads/${l.id}`} className="font-medium text-indigo-600 hover:underline">{l.contacts?.name}</Link>
@@ -169,6 +180,25 @@ export function LeadsPage() {
         </table>
         {!isLoading && rows.length === 0 && <p className="p-6 text-center text-slate-500">No leads found.</p>}
       </div>
+
+      {rows.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+          <span>Showing {start + 1}–{start + pageRows.length} of {rows.length}</span>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2">
+              Per page
+              <select aria-label="Leads per page" className={`${field} !w-auto`} value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+                {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            <div className="flex items-center gap-1">
+              <button aria-label="Previous page" disabled={current <= 1} onClick={() => setPage(current - 1)} className="rounded p-1.5 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-transparent"><ChevronLeft className="size-4" /></button>
+              <span className="px-1">Page {current} of {pages}</span>
+              <button aria-label="Next page" disabled={current >= pages} onClick={() => setPage(current + 1)} className="rounded p-1.5 hover:bg-slate-200 disabled:opacity-40 disabled:hover:bg-transparent"><ChevronRight className="size-4" /></button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editing && <LeadForm lead={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </div>
