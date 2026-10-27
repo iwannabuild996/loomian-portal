@@ -4,7 +4,7 @@ import { Check, ClipboardCopy, Download, Upload } from 'lucide-react';
 import { field } from '../ResourcePage';
 import { supabase } from '../../../lib/supabase';
 import { formatINR } from '../../../lib/money';
-import { applyPlan, type ProjectResult } from './apply';
+import { runImport, type ImportOutcome } from './apply';
 import { buildPlan, EXAMPLE, llmInstructions, parseJson, planErrors, type Change, type Existing, type Plan } from './plan';
 
 const MONEY = new Set(['price', 'parking_charge', 'floor_hike_per_floor']);
@@ -32,6 +32,9 @@ function Changes({ changes }: { changes: Change[] }) {
   );
 }
 
+const summary = (c: { projects_created: number; projects_updated: number; types_created: number; types_updated: number }) =>
+  `${c.projects_created} project${c.projects_created === 1 ? '' : 's'} created, ${c.projects_updated} updated, ${c.types_created} types added, ${c.types_updated} types updated`;
+
 function download(name: string, body: string) {
   const url = URL.createObjectURL(new Blob([body], { type: 'application/json' }));
   const a = document.createElement('a');
@@ -48,7 +51,7 @@ export function ImportPage() {
   const [builderId, setBuilderId] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [outcome, setOutcome] = useState<{ results: ProjectResult[]; fatal?: string } | null>(null);
+  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
 
   const { data: existing, isLoading, error } = useQuery({
     queryKey: ['import-existing'],
@@ -89,13 +92,16 @@ export function ImportPage() {
     if (fileRef.current) fileRef.current.value = '';
   };
 
-  const run = async () => {
+  const run = async (dryRun: boolean) => {
     if (!plan) return;
     setBusy(true);
-    setOutcome(await applyPlan(plan, builderId));
+    setOutcome(null);
+    const result = await runImport(plan, builderId, dryRun);
+    setOutcome(result);
     setBusy(false);
-    await qc.invalidateQueries();
+    if (!dryRun && result.ok) await qc.invalidateQueries();
   };
+  const imported = !!outcome && outcome.ok && !outcome.dryRun;
 
   const counts = plan && {
     newProjects: plan.projects.filter((p) => p.action === 'create').length,
@@ -233,31 +239,45 @@ export function ImportPage() {
             ))}
           </div>
 
-          <div className="sticky bottom-0 -mx-1 flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/95 px-1 py-3">
-            <p className="text-sm text-slate-600">{todo ? `${todo} project${todo === 1 ? '' : 's'} will be saved.` : 'Nothing to import.'}</p>
-            <button
-              onClick={run}
-              disabled={busy || !builderId || errors.length > 0 || todo === 0 || !!outcome}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {busy ? 'Importing…' : 'Import'}
-            </button>
+          <div className="sticky bottom-0 -mx-1 border-t border-slate-200 bg-slate-50/95 px-1 py-3">
+            {outcome && !outcome.ok && (
+              <p role="alert" className="mb-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                {outcome.dryRun ? 'The database check failed' : 'Import failed, nothing was saved'}: {outcome.message}
+              </p>
+            )}
+            {outcome?.ok && outcome.dryRun && (
+              <p role="status" className="mb-2 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                Database check passed: {summary(outcome.counts)}. Nothing has been saved yet.
+              </p>
+            )}
+            {imported && outcome.ok && (
+              <p role="status" className="mb-2 rounded-lg bg-green-50 p-3 text-sm text-green-700">Imported: {summary(outcome.counts)}.</p>
+            )}
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                {todo ? `${todo} project${todo === 1 ? '' : 's'} will be saved, all or nothing.` : 'Nothing to import.'}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => run(true)}
+                  disabled={busy || !builderId || errors.length > 0 || todo === 0 || imported}
+                  className="rounded-lg px-4 py-2 text-sm ring-1 ring-slate-300 hover:bg-white disabled:opacity-50"
+                >
+                  Check with database
+                </button>
+                <button
+                  onClick={() => run(false)}
+                  disabled={busy || !builderId || errors.length > 0 || todo === 0 || imported}
+                  className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {busy ? 'Working…' : 'Import'}
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       )}
 
-      {outcome && (
-        <section className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-          <h2 className="mb-2 font-semibold">Result</h2>
-          {outcome.fatal && <p role="alert" className="text-sm text-red-600">{outcome.fatal}</p>}
-          <ul className="space-y-1 text-sm">
-            {outcome.results.map((r, i) => (
-              <li key={i} className={r.ok ? 'text-green-700' : 'text-red-600'}>{r.ok ? '✓' : '✗'} <span className="font-medium">{r.name}</span> — {r.message}</li>
-            ))}
-          </ul>
-          {outcome.results.some((r) => !r.ok) && <p className="mt-2 text-xs text-slate-500">Projects marked ✗ were not fully saved. Fix the cause and import again: already-saved projects will show as unchanged.</p>}
-        </section>
-      )}
     </div>
   );
 }
