@@ -163,6 +163,16 @@ export function ProjectsPage() {
       select="*, builders(name), locations(name), project_files(count)"
       order="name"
       deleteWarning="All types and files of this project are deleted too."
+      filters={[
+        { label: 'Builder', allLabel: 'All builders', options: builders, get: (r) => r.builder_id },
+        { label: 'Location', allLabel: 'All locations', options: locations, get: (r) => r.location_id },
+        {
+          label: 'Status',
+          allLabel: 'All statuses',
+          options: [{ value: 'ready_to_move', label: 'Ready to move' }, { value: 'off_plan', label: 'Off-plan' }],
+          get: (r) => r.status,
+        },
+      ]}
       collectAssets={async (row) => {
         const [files, types] = await Promise.all([
           supabase.from('project_files').select('path').eq('project_id', row.id),

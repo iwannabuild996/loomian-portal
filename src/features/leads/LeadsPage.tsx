@@ -120,7 +120,7 @@ export function LeadsPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100">
             <tr>
-              {['Name', 'Phone', 'Enquiry', 'Requirement', 'Status', 'Source', 'Type', 'Category', 'Project status', 'Locations', 'Budget', 'Quality', 'Allocated Builders', 'Added'].map((h) => (
+              {['Name', 'Phone', 'Enquiry', 'Status', 'Requirement', 'Allocated Builders', 'Type', 'Category', 'Project status', 'Locations', 'Budget', 'Quality', 'Source', 'Added'].map((h) => (
                 <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
               ))}
               {canWrite && <th className="w-24 px-4 py-2.5" />}
@@ -142,12 +142,12 @@ export function LeadsPage() {
                   ))}
                 </td>
                 <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.enquiry ?? '—'}</span></td>
-                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.requirement ?? '—'}</span></td>
                 <td className="px-4 py-2.5">
                   <span className="whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">{l.lead_statuses?.name}</span>
                   {l.lead_status_log?.[0]?.note && <span className="mt-1 line-clamp-2 min-w-40 text-slate-600">{l.lead_status_log[0].note}</span>}
                 </td>
-                <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
+                <td className="px-4 py-2.5"><span className="line-clamp-2 min-w-40 text-slate-600">{l.requirement ?? '—'}</span></td>
+                <td className="px-4 py-2.5"><BuilderList builders={l.lead_builders} /></td>
                 <td className="px-4 py-2.5">{l.project_types.length ? l.project_types.map((t) => PROJECT_TYPE_LABEL[t]).join(', ') : '—'}</td>
                 <td className="px-4 py-2.5">{l.categories.length ? l.categories.map((c) => CATEGORY_LABEL[c]).join(', ') : '—'}</td>
                 <td className="px-4 py-2.5">{l.completion_types.length ? l.completion_types.map((c) => COMPLETION_LABEL[c]).join(', ') : '—'}</td>
@@ -158,7 +158,7 @@ export function LeadsPage() {
                 <td className="px-4 py-2.5">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[l.quality]}`}>{QUALITY_LABEL[l.quality]}</span>
                 </td>
-                <td className="px-4 py-2.5"><BuilderList builders={l.lead_builders} /></td>
+                <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{new Date(l.created_at).toLocaleDateString()}</td>
                 {canWrite && (
                   <td className="px-4 py-2.5">

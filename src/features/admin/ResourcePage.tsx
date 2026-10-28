@@ -34,6 +34,9 @@ export type Field = {
   disabled?: (row: Row | null) => boolean;
 };
 
+/** A dropdown above the table that keeps only rows whose `get` value equals the chosen option. */
+export type Filter = { label: string; allLabel: string; options: { value: string; label: string }[]; get: (row: Row) => string | null | undefined };
+
 export type Column = { header: string; cell: (row: Row) => ReactNode };
 
 type Props = {
@@ -46,6 +49,7 @@ type Props = {
   sort?: (a: Row, b: Row) => number;
   columns: Column[];
   fields: Field[];
+  filters?: Filter[];
   canCreate?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
@@ -244,11 +248,12 @@ export function FormModal({ title, table, fields, row, onClose, nextOrder, fixed
 }
 
 export function ResourcePage({
-  title, singular, description, table, select = '*', order, sort, columns, fields,
+  title, singular, description, table, select = '*', order, sort, columns, fields, filters = [],
   canCreate = true, canEdit = true, canDelete = true, deleteWarning, collectAssets, reorderable = false,
 }: Props) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Row | 'new' | null>(null);
+  const [chosen, setChosen] = useState<Record<string, string>>({});
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const queryKey = ['admin', table, select];
@@ -300,7 +305,8 @@ export function ResourcePage({
     reorder.mutate(rows);
   };
 
-  const dnd = reorderable && canEdit;
+  const rows = data.filter((r) => filters.every((f) => !chosen[f.label] || f.get(r) === chosen[f.label]));
+  const dnd = reorderable && canEdit && rows.length === data.length;
 
   const onDelete = (row: Row) => {
     const extra = deleteWarning ? `\n\n${deleteWarning}` : '';
@@ -326,6 +332,23 @@ export function ResourcePage({
         )}
       </div>
 
+      {filters.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {filters.map((f) => (
+            <select key={f.label} aria-label={f.label} className={`${field} !w-auto`} value={chosen[f.label] ?? ''} onChange={(e) => setChosen((c) => ({ ...c, [f.label]: e.target.value }))}>
+              <option value="">{f.allLabel}</option>
+              {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          ))}
+          {Object.values(chosen).some(Boolean) && (
+            <>
+              <button onClick={() => setChosen({})} className="rounded-lg px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50">Clear filters</button>
+              <span className="text-sm text-slate-500">{rows.length} of {data.length}</span>
+            </>
+          )}
+        </div>
+      )}
+
       {isLoading && <p className="text-slate-500">Loading…</p>}
       {error && <p role="alert" className="mb-3 text-sm text-red-600">Failed to load: {error.message}</p>}
       {del.error && <p role="alert" className="mb-3 text-sm text-red-600">Delete failed: {friendlyError(del.error)}</p>}
@@ -344,7 +367,7 @@ export function ResourcePage({
             </tr>
           </thead>
           <tbody>
-            {data.map((row) => (
+            {rows.map((row) => (
               <tr
                 key={row.id}
                 className={`border-t border-slate-200 hover:bg-slate-50 ${dragId === row.id ? 'opacity-40' : ''} ${dragId && overId === row.id && dragId !== row.id ? 'border-t-2 border-t-indigo-500' : ''}`}
@@ -380,7 +403,7 @@ export function ResourcePage({
             ))}
           </tbody>
         </table>
-        {!isLoading && data.length === 0 && <p className="p-6 text-center text-slate-500">No {title.toLowerCase()} yet.</p>}
+        {!isLoading && rows.length === 0 && <p className="p-6 text-center text-slate-500">{data.length === 0 ? `No ${title.toLowerCase()} yet.` : `No ${title.toLowerCase()} match the filters.`}</p>}
       </div>
 
       {editing && (
