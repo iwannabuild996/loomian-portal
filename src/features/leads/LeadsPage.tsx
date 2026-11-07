@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MessageCircle, Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../auth/AuthProvider';
+import { canEditLeads, useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
 import { BuilderList } from './BuilderList';
 import { LeadForm } from './LeadForm';
+import { AssigneeSelect } from './AssigneeSelect';
+import { assigneeName, useAssignees } from './useAssignees';
 import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type ProjectType, type Quality } from './types';
 
 export const QUALITY_TONE: Record<Quality, string> = {
@@ -21,7 +23,11 @@ const PAGE_SIZES = [25, 50, 100, 200];
 export function LeadsPage() {
   const qc = useQueryClient();
   const { role } = useAuth();
-  const canWrite = role === 'admin' || role === 'editor';
+  const canWrite = canEditLeads(role);
+  // Sales users only ever receive their own leads, so assignment columns/filters are for staff.
+  const isStaff = role === 'admin' || role === 'editor';
+  const assignees = useAssignees(isStaff);
+  const [assignee, setAssignee] = useState('');
   const sources = useOptions('lead_sources', 'name', 'sort_order');
   const [editing, setEditing] = useState<Lead | 'new' | null>(null);
   const [search, setSearch] = useState('');
@@ -38,7 +44,7 @@ export function LeadsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_status_log(note), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
+        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), assignee:profiles!leads_assigned_to_fkey(full_name, email), lead_status_log(note), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
         .order('created_at', { ascending: false })
         .order('changed_at', { referencedTable: 'lead_status_log', ascending: false })
         .limit(1, { referencedTable: 'lead_status_log' });
@@ -64,14 +70,15 @@ export function LeadsPage() {
         (!quality || l.quality === quality) &&
         (!source || l.lead_source_links.some((x) => x.lead_source_id === source)) &&
         (!status || l.status_id === status) &&
+        (!assignee || (assignee === 'none' ? !l.assigned_to : l.assigned_to === assignee)) &&
         (!type || l.project_types.includes(type as ProjectType)) &&
         (!q ||
           l.contacts?.name.toLowerCase().includes(q) ||
           (digits && l.contacts?.contact_phones.some((p) => (p.country_code + p.number).includes(digits)))),
     );
-  }, [data, search, quality, source, status, type]);
+  }, [data, search, quality, source, status, type, assignee]);
 
-  useEffect(() => setPage(1), [search, quality, source, status, type, pageSize]);
+  useEffect(() => setPage(1), [search, quality, source, status, type, assignee, pageSize]);
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const current = Math.min(page, pages);
@@ -83,7 +90,9 @@ export function LeadsPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Leads</h1>
-          <p className="text-sm text-slate-500">Enquiries from prospective buyers. Phone numbers are unique per contact.</p>
+          <p className="text-sm text-slate-500">
+            {role === 'sales' ? 'Leads assigned to you. Leads you add are assigned to you automatically.' : 'Enquiries from prospective buyers. Phone numbers are unique per contact.'}
+          </p>
         </div>
         {canWrite && (
           <button onClick={() => setEditing('new')} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
@@ -106,6 +115,13 @@ export function LeadsPage() {
           <option value="">All sources</option>
           {sources.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
+        {isStaff && (
+          <select aria-label="Assigned to" className={field} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+            <option value="">All assignees</option>
+            <option value="none">Unassigned</option>
+            {assignees.map((a) => <option key={a.id} value={a.id}>{assigneeName(a)}</option>)}
+          </select>
+        )}
         <select aria-label="Project type" className={field} value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">All types</option>
           {(Object.keys(PROJECT_TYPE_LABEL) as ProjectType[]).map((t) => <option key={t} value={t}>{PROJECT_TYPE_LABEL[t]}</option>)}
@@ -120,7 +136,7 @@ export function LeadsPage() {
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-100">
             <tr>
-              {['Name', 'Phone', 'Enquiry', 'Status', 'Requirement', 'Allocated Builders', 'Type', 'Category', 'Project status', 'Locations', 'Budget', 'Quality', 'Source', 'Added'].map((h) => (
+              {['Name', 'Phone', 'Enquiry', 'Status', 'Requirement', 'Allocated Builders', 'Type', 'Category', 'Project status', 'Locations', 'Budget', 'Quality', 'Source', ...(isStaff ? ['Assigned to'] : []), 'Added'].map((h) => (
                 <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
               ))}
               {canWrite && <th className="w-24 px-4 py-2.5" />}
@@ -159,18 +175,21 @@ export function LeadsPage() {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[l.quality]}`}>{QUALITY_LABEL[l.quality]}</span>
                 </td>
                 <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
+                {isStaff && <td className="whitespace-nowrap px-4 py-2.5"><AssigneeSelect leadId={l.id} value={l.assigned_to} compact /></td>}
                 <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{new Date(l.created_at).toLocaleDateString()}</td>
                 {canWrite && (
                   <td className="px-4 py-2.5">
                     <div className="flex justify-end gap-1">
                       <button aria-label="Edit lead" onClick={() => setEditing(l)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200"><Pencil className="size-4" /></button>
-                      <button
-                        aria-label="Delete lead"
-                        onClick={() => window.confirm('Delete this lead? The contact and phone numbers are kept.') && del.mutate(l)}
-                        className="rounded p-1.5 text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      {isStaff && (
+                        <button
+                          aria-label="Delete lead"
+                          onClick={() => window.confirm('Delete this lead? The contact and phone numbers are kept.') && del.mutate(l)}
+                          className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 )}

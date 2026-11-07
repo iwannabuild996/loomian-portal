@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../auth/AuthProvider';
+import { canEditLeads, useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
 import { TaskForm } from './TaskForm';
@@ -18,7 +18,7 @@ const GROUPS: { key: DueGroup; label: string; tone: string }[] = [
 
 export function TasksPage() {
   const { role } = useAuth();
-  const canWrite = role === 'admin' || role === 'editor';
+  const canWrite = canEditLeads(role);
   const types = useOptions('task_types', 'name', 'sort_order');
   const [tab, setTab] = useState<'pending' | 'done'>('pending');
   const [typeId, setTypeId] = useState('');

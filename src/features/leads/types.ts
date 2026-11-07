@@ -43,6 +43,8 @@ export type Lead = {
   contacts: { name: string; email: string | null; contact_phones: Phone[] } | null;
   lead_source_links: { lead_source_id: string; lead_sources: { name: string } | null }[];
   status_id: string;
+  assigned_to: string | null;
+  assignee?: { full_name: string | null; email: string | null } | null;
   lead_statuses: { name: string } | null;
   /** Only the latest entry is loaded on the leads list: its note belongs to the current status. */
   lead_status_log?: { note: string | null }[];

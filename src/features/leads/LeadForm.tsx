@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { COUNTRY_CODES, isValidPhone, normalizeNumber } from '../../lib/phone';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
+import { useAuth } from '../auth/AuthProvider';
+import { assigneeName, useAssignees } from './useAssignees';
 import { CATEGORY_LABEL, COMPLETION_LABEL, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Category, type CompletionType, type Lead, type Phone, type ProjectType, type Quality } from './types';
 
 type Existing = { id: string; name: string; email: string | null };
@@ -14,6 +16,10 @@ const emptyPhone = (): Phone => ({ country_code: '+91', number: '', has_whatsapp
 export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => void }) {
   const qc = useQueryClient();
   const sources = useOptions('lead_sources', 'name', 'sort_order');
+  const { role } = useAuth();
+  const isStaff = role === 'admin' || role === 'editor';
+  const assignees = useAssignees(isStaff);
+  const [assignedTo, setAssignedTo] = useState(lead?.assigned_to ?? '');
   const [name, setName] = useState(lead?.contacts?.name ?? '');
   const [email, setEmail] = useState(lead?.contacts?.email ?? '');
   const [phones, setPhones] = useState<Phone[]>(lead?.contacts?.contact_phones.length ? lead.contacts.contact_phones : [emptyPhone()]);
@@ -52,7 +58,7 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('save_lead', {
+      const { data: savedId, error } = await supabase.rpc('save_lead', {
         p_lead_id: lead?.id ?? null,
         p_name: name.trim(),
         p_email: email.trim(),
@@ -74,13 +80,21 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
         },
       });
       if (error) throw error;
+      // Sales users' leads are assigned to them by the database; staff choose the assignee here.
+      if (isStaff && assignedTo !== (lead?.assigned_to ?? '')) {
+        const { error: assignError } = await supabase
+          .from('leads')
+          .update({ assigned_to: assignedTo || null })
+          .eq('id', (lead?.id ?? savedId) as string);
+        if (assignError) throw assignError;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries();
       onClose();
     },
     onError: (e) =>
-      setError((e as { code?: string }).code === '23505' ? 'One of these phone numbers already belongs to another contact.' : friendlyError(e)),
+      setError((e as { code?: string }).code === '23505' ? 'One of these phone numbers already belongs to another contact' + (role === 'sales' ? ', possibly a lead assigned to someone else. Ask an admin.' : '.') : friendlyError(e)),
   });
 
   const onSubmit = (e: FormEvent) => {
@@ -259,6 +273,15 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
             </select>
           </div>
         </div>
+        {isStaff && (
+          <div>
+            <label htmlFor="lead-assignee" className={label}>Assigned to</label>
+            <select id="lead-assignee" className={field} value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
+              <option value="">Unassigned</option>
+              {assignees.map((a) => <option key={a.id} value={a.id}>{assigneeName(a)} ({a.role})</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <span className={label}>Allocated Builders</span>
           <p className="mb-2 text-xs text-slate-500">Select every builder for this lead, then star the ones the lead enquired about.</p>

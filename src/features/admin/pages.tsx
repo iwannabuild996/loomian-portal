@@ -7,7 +7,6 @@ import { formatINR } from '../../lib/money';
 import { formatMonthYear } from '../../lib/month';
 import { PROPERTY_TYPE_LABEL, type PropertyType } from '../../lib/propertyType';
 import { assetUrl } from '../../lib/storage';
-import { useAuth } from '../auth/AuthProvider';
 import { ResourcePage } from './ResourcePage';
 import { useTypeFields } from './typeFields';
 import { useOptions } from './useOptions';
@@ -294,42 +293,6 @@ export function TypesPage() {
         },
       ]}
       fields={fields}
-    />
-  );
-}
-
-export function UsersPage() {
-  const { session } = useAuth();
-  return (
-    <ResourcePage
-      title="Users"
-      singular="user"
-      description="Create logins in the Supabase dashboard (Authentication → Users); they appear here as viewers. Change roles here."
-      table="profiles"
-      order="email"
-      canCreate={false}
-      canDelete={false}
-      columns={[
-        { header: 'Email', cell: (r) => <span className="font-medium">{dash(r.email)}</span> },
-        { header: 'Name', cell: (r) => dash(r.full_name) },
-        { header: 'Role', cell: (r) => <span className="capitalize">{r.role}</span> },
-      ]}
-      fields={[
-        { name: 'full_name', label: 'Name', kind: 'text' },
-        {
-          name: 'role',
-          label: 'Role',
-          kind: 'select',
-          required: true,
-          options: [
-            { value: 'admin', label: 'Admin' },
-            { value: 'editor', label: 'Editor' },
-            { value: 'viewer', label: 'Viewer' },
-          ],
-          hint: 'Admins manage users; editors change data; viewers are read-only. You cannot change your own role.',
-          disabled: (row) => row?.id === session?.user.id,
-        },
-      ]}
     />
   );
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../auth/AuthProvider';
+import { canEditLeads, useAuth } from '../auth/AuthProvider';
 import { friendlyError } from '../admin/ResourcePage';
 import { dueGroup, formatDue } from '../tasks/types';
 import { MeetingForm } from './MeetingForm';
@@ -18,7 +18,7 @@ const STATUS_TONE: Record<MeetingStatus, string> = {
 export function MeetingsPage() {
   const qc = useQueryClient();
   const { role } = useAuth();
-  const canWrite = role === 'admin' || role === 'editor';
+  const canWrite = canEditLeads(role);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [editing, setEditing] = useState<Meeting | 'new' | null>(null);
 

@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 
-export type Role = 'admin' | 'editor' | 'viewer';
+export type Role = 'admin' | 'editor' | 'sales' | 'viewer';
+
+/** Roles that can add and edit leads, tasks and meetings. Sales users only reach their own. */
+export const canEditLeads = (role: Role | null) => role === 'admin' || role === 'editor' || role === 'sales';
 
 type AuthState = {
   session: Session | null;
@@ -38,10 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     supabase
       .from('profiles')
-      .select('role')
+      .select('role, disabled')
       .eq('id', userId)
       .single()
       .then(({ data }) => {
+        // A blocked user is signed out at once (their login is also banned in Supabase Auth).
+        if (data?.disabled) {
+          supabase.auth.signOut();
+          return;
+        }
         setRole((data?.role as Role) ?? 'viewer');
         setLoading(false);
       });

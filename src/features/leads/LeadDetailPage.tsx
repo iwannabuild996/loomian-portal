@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BuilderList } from './BuilderList';
 import { ArrowLeft, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../auth/AuthProvider';
+import { canEditLeads, useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
 import { TaskForm } from '../tasks/TaskForm';
@@ -12,12 +12,13 @@ import { dueGroup, formatDue, TASK_SELECT, type Task } from '../tasks/types';
 import { useTaskActions } from '../tasks/useTaskActions';
 import { LeadCallRecordings } from '../calls/LeadCallRecordings';
 import { LeadForm } from './LeadForm';
+import { AssigneeSelect } from './AssigneeSelect';
 import { StatusLogForm } from './StatusLogForm';
 import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
 import { QUALITY_TONE } from './LeadsPage';
 
 const SELECT =
-  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))';
+  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), assignee:profiles!leads_assigned_to_fkey(full_name, email), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -32,7 +33,8 @@ export function LeadDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { role } = useAuth();
-  const canWrite = role === 'admin' || role === 'editor';
+  const canWrite = canEditLeads(role);
+  const isStaff = role === 'admin' || role === 'editor';
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
 
@@ -130,6 +132,12 @@ export function LeadDetailPage() {
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[lead.quality]}`}>{QUALITY_LABEL[lead.quality]}</span>
             Added {new Date(lead.created_at).toLocaleDateString()}
           </p>
+          {isStaff && (
+            <label className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+              Assigned to
+              <AssigneeSelect leadId={lead.id} value={lead.assigned_to} />
+            </label>
+          )}
         </div>
         {canWrite && (
           <button onClick={() => setEditing(true)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
@@ -296,7 +304,7 @@ export function LeadDetailPage() {
           </dl>
         </section>
 
-        {canWrite && (
+        {isStaff && (
           <LeadCallRecordings phones={lead.contacts?.contact_phones.map((p) => p.country_code + p.number) ?? []} />
         )}
 
