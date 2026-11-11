@@ -31,12 +31,14 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route element={<RequireAuth />}>
               <Route element={<AppLayout />}>
-                <Route path="/" element={<InventoryPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/meetings" element={<MeetingsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                <Route element={<RequireRole roles={['admin', 'editor', 'viewer']} redirectTo="/leads" />}>
+                  <Route path="/" element={<InventoryPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                </Route>
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route element={<RequireRole roles={['admin', 'editor']} />}>
                   <Route path="/admin/inventory-sheet" element={<InventorySheetPage />} />

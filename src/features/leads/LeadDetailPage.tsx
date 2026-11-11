@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BuilderList } from './BuilderList';
-import { ArrowLeft, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { canEditLeads, useAuth } from '../auth/AuthProvider';
 import { field, friendlyError } from '../admin/ResourcePage';
@@ -13,6 +13,7 @@ import { useTaskActions } from '../tasks/useTaskActions';
 import { LeadCallRecordings } from '../calls/LeadCallRecordings';
 import { LeadForm } from './LeadForm';
 import { AssigneeSelect } from './AssigneeSelect';
+import { useArchiveLead } from './useArchiveLead';
 import { StatusLogForm } from './StatusLogForm';
 import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Lead, type StatusLogEntry } from './types';
 import { QUALITY_TONE } from './LeadsPage';
@@ -37,6 +38,7 @@ export function LeadDetailPage() {
   const isStaff = role === 'admin' || role === 'editor';
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
+  const archive = useArchiveLead();
 
   const { data: lead, isLoading, error } = useQuery({
     queryKey: ['leads', id],
@@ -125,12 +127,14 @@ export function LeadDetailPage() {
   return (
     <div className="mx-auto max-w-4xl">
       {back}
+      {archive.error && <p role="alert" className="mb-3 text-sm text-red-600">{friendlyError(archive.error)}</p>}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{lead.contacts?.name}</h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[lead.quality]}`}>{QUALITY_LABEL[lead.quality]}</span>
             Added {new Date(lead.created_at).toLocaleDateString()}
+            {lead.archived_at && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">Archived {new Date(lead.archived_at).toLocaleDateString()}</span>}
           </p>
           {isStaff && (
             <label className="mt-2 flex items-center gap-2 text-sm text-slate-500">
@@ -140,9 +144,18 @@ export function LeadDetailPage() {
           )}
         </div>
         {canWrite && (
-          <button onClick={() => setEditing(true)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            <Pencil className="size-4" /> Edit lead
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => archive.mutate({ id: lead.id, archive: !lead.archived_at })}
+              disabled={archive.isPending}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100 disabled:opacity-60"
+            >
+              {lead.archived_at ? <><ArchiveRestore className="size-4" /> Restore</> : <><Archive className="size-4" /> Archive</>}
+            </button>
+            <button onClick={() => setEditing(true)} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+              <Pencil className="size-4" /> Edit lead
+            </button>
+          </div>
         )}
       </div>
 

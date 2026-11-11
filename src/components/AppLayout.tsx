@@ -6,7 +6,7 @@ import { useAuth, type Role } from '../features/auth/AuthProvider';
 type NavItem = { to: string; label: string; icon: LucideIcon; roles?: Role[] };
 
 const nav: NavItem[] = [
-  { to: '/', label: 'Inventory', icon: Building2 },
+  { to: '/', label: 'Inventory', icon: Building2, roles: ['admin', 'editor', 'viewer'] },
   { to: '/leads', label: 'Leads', icon: Target },
   { to: '/tasks', label: 'Tasks', icon: CalendarCheck },
   { to: '/meetings', label: 'Meetings', icon: CalendarClock },
@@ -77,7 +77,7 @@ export function AppLayout() {
         <Building2 className="size-5 text-indigo-400" /> Loomian
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {links(nav)}
+        {links(nav.filter((i) => !i.roles || (role && i.roles.includes(role))))}
         {adminItems.length > 0 && (
           <>
             <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Admin</p>

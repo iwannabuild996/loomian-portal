@@ -23,6 +23,7 @@ export function TaskForm({ fixedLeadId, task, onClose }: { fixedLeadId?: string;
       const { data, error } = await supabase
         .from('leads')
         .select('id, contacts(name, contact_phones(country_code, number))')
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as LeadOption[];

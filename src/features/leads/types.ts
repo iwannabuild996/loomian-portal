@@ -44,6 +44,7 @@ export type Lead = {
   lead_source_links: { lead_source_id: string; lead_sources: { name: string } | null }[];
   status_id: string;
   assigned_to: string | null;
+  archived_at: string | null;
   assignee?: { full_name: string | null; email: string | null } | null;
   lead_statuses: { name: string } | null;
   /** Only the latest entry is loaded on the leads list: its note belongs to the current status. */
