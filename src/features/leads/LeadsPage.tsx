@@ -47,7 +47,7 @@ export function LeadsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('leads')
-        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), assignee:profiles!leads_assigned_to_fkey(full_name, email), lead_status_log(note), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
+        .select('*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_assignees(profile_id, profiles(full_name, email)), lead_status_log(note), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))')
         .order('created_at', { ascending: false })
         .order('changed_at', { referencedTable: 'lead_status_log', ascending: false })
         .limit(1, { referencedTable: 'lead_status_log' });
@@ -74,7 +74,7 @@ export function LeadsPage() {
         (!quality || l.quality === quality) &&
         (!source || l.lead_source_links.some((x) => x.lead_source_id === source)) &&
         (!status || l.status_id === status) &&
-        (!assignee || (assignee === 'none' ? !l.assigned_to : l.assigned_to === assignee)) &&
+        (!assignee || (assignee === 'none' ? !l.lead_assignees.length : l.lead_assignees.some((x) => x.profile_id === assignee))) &&
         (!type || l.project_types.includes(type as ProjectType)) &&
         (!q ||
           l.contacts?.name.toLowerCase().includes(q) ||
@@ -188,7 +188,7 @@ export function LeadsPage() {
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${QUALITY_TONE[l.quality]}`}>{QUALITY_LABEL[l.quality]}</span>
                 </td>
                 <td className="px-4 py-2.5">{l.lead_source_links.length ? l.lead_source_links.map((x) => x.lead_sources?.name).filter(Boolean).join(', ') : '—'}</td>
-                {isStaff && <td className="whitespace-nowrap px-4 py-2.5"><AssigneeSelect leadId={l.id} value={l.assigned_to} compact /></td>}
+                {isStaff && <td className="whitespace-nowrap px-4 py-2.5"><AssigneeSelect leadId={l.id} value={l.lead_assignees.map((x) => x.profile_id)} compact /></td>}
                 <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{new Date(l.created_at).toLocaleDateString()}</td>
                 {canWrite && (
                   <td className="px-4 py-2.5">

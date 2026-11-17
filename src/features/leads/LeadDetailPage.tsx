@@ -19,7 +19,7 @@ import { CATEGORY_LABEL, COMPLETION_LABEL, formatBudget, PROJECT_TYPE_LABEL, QUA
 import { QUALITY_TONE } from './LeadsPage';
 
 const SELECT =
-  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), assignee:profiles!leads_assigned_to_fkey(full_name, email), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))';
+  '*, contacts(name, email, contact_phones(id, country_code, number, has_whatsapp)), lead_source_links(lead_source_id, lead_sources(name)), lead_statuses(name), lead_assignees(profile_id, profiles(full_name, email)), lead_builders(builder_id, is_enquired, builders(name)), lead_locations(location_id, locations(name))';
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -139,7 +139,7 @@ export function LeadDetailPage() {
           {isStaff && (
             <label className="mt-2 flex items-center gap-2 text-sm text-slate-500">
               Assigned to
-              <AssigneeSelect leadId={lead.id} value={lead.assigned_to} />
+              <AssigneeSelect leadId={lead.id} value={lead.lead_assignees.map((x) => x.profile_id)} />
             </label>
           )}
         </div>

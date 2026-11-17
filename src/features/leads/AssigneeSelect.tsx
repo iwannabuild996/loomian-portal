@@ -1,38 +1,31 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { field, friendlyError } from '../admin/ResourcePage';
-import { assigneeName, useAssignees } from './useAssignees';
+import { friendlyError } from '../admin/ResourcePage';
+import { AssigneePicker } from './AssigneePicker';
 
-/** Admin/editor-only dropdown that reassigns a lead on change, without opening the edit form. */
-export function AssigneeSelect({ leadId, value, compact = false }: { leadId: string; value: string | null; compact?: boolean }) {
+/** Admin/editor-only picker that changes a lead's assignees on the spot, without opening the edit form. */
+export function AssigneeSelect({ leadId, value, compact = false }: { leadId: string; value: string[]; compact?: boolean }) {
   const qc = useQueryClient();
-  const assignees = useAssignees();
 
   const assign = useMutation({
-    mutationFn: async (assignedTo: string) => {
-      const { data, error } = await supabase
-        .from('leads')
-        .update({ assigned_to: assignedTo || null })
-        .eq('id', leadId)
-        .select('id');
-      if (error) throw error;
-      if (!data?.length) throw new Error('Not permitted, or the lead no longer exists.');
+    mutationFn: async (next: string[]) => {
+      const added = next.filter((id) => !value.includes(id));
+      const removed = value.filter((id) => !next.includes(id));
+      if (added.length) {
+        const { error } = await supabase.from('lead_assignees').insert(added.map((profile_id) => ({ lead_id: leadId, profile_id })));
+        if (error) throw error;
+      }
+      if (removed.length) {
+        const { error } = await supabase.from('lead_assignees').delete().eq('lead_id', leadId).in('profile_id', removed);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => qc.invalidateQueries(),
+    onSettled: () => qc.invalidateQueries(),
   });
 
   return (
     <div>
-      <select
-        aria-label="Assigned to"
-        className={`${field} ${compact ? '!w-auto min-w-36 !py-1' : '!w-auto min-w-48'}`}
-        value={value ?? ''}
-        disabled={assign.isPending}
-        onChange={(e) => assign.mutate(e.target.value)}
-      >
-        <option value="">Unassigned</option>
-        {assignees.map((a) => <option key={a.id} value={a.id}>{assigneeName(a)}{compact ? '' : ` (${a.role})`}</option>)}
-      </select>
+      <AssigneePicker value={value} onChange={(next) => assign.mutate(next)} disabled={assign.isPending} compact={compact} />
       {assign.error && <p role="alert" className="mt-1 text-xs text-red-600">{friendlyError(assign.error)}</p>}
     </div>
   );

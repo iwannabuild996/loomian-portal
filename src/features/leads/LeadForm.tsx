@@ -6,7 +6,7 @@ import { COUNTRY_CODES, isValidPhone, normalizeNumber } from '../../lib/phone';
 import { field, friendlyError } from '../admin/ResourcePage';
 import { useOptions } from '../admin/useOptions';
 import { useAuth } from '../auth/AuthProvider';
-import { assigneeName, useAssignees } from './useAssignees';
+import { AssigneePicker } from './AssigneePicker';
 import { CATEGORY_LABEL, COMPLETION_LABEL, PROJECT_TYPE_LABEL, QUALITY_LABEL, type Category, type CompletionType, type Lead, type Phone, type ProjectType, type Quality } from './types';
 
 type Existing = { id: string; name: string; email: string | null };
@@ -18,8 +18,8 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
   const sources = useOptions('lead_sources', 'name', 'sort_order');
   const { role } = useAuth();
   const isStaff = role === 'admin' || role === 'editor';
-  const assignees = useAssignees(isStaff);
-  const [assignedTo, setAssignedTo] = useState(lead?.assigned_to ?? '');
+  const initialAssignees = lead?.lead_assignees.map((x) => x.profile_id) ?? [];
+  const [assignedTo, setAssignedTo] = useState<string[]>(initialAssignees);
   const [name, setName] = useState(lead?.contacts?.name ?? '');
   const [email, setEmail] = useState(lead?.contacts?.email ?? '');
   const [phones, setPhones] = useState<Phone[]>(lead?.contacts?.contact_phones.length ? lead.contacts.contact_phones : [emptyPhone()]);
@@ -81,12 +81,18 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
       });
       if (error) throw error;
       // Sales users' leads are assigned to them by the database; staff choose the assignee here.
-      if (isStaff && assignedTo !== (lead?.assigned_to ?? '')) {
-        const { error: assignError } = await supabase
-          .from('leads')
-          .update({ assigned_to: assignedTo || null })
-          .eq('id', (lead?.id ?? savedId) as string);
-        if (assignError) throw assignError;
+      if (isStaff) {
+        const leadId = (lead?.id ?? savedId) as string;
+        const added = assignedTo.filter((id) => !initialAssignees.includes(id));
+        const removed = initialAssignees.filter((id) => !assignedTo.includes(id));
+        if (added.length) {
+          const { error: addError } = await supabase.from('lead_assignees').insert(added.map((profile_id) => ({ lead_id: leadId, profile_id })));
+          if (addError) throw addError;
+        }
+        if (removed.length) {
+          const { error: removeError } = await supabase.from('lead_assignees').delete().eq('lead_id', leadId).in('profile_id', removed);
+          if (removeError) throw removeError;
+        }
       }
     },
     onSuccess: () => {
@@ -275,11 +281,8 @@ export function LeadForm({ lead, onClose }: { lead: Lead | null; onClose: () => 
         </div>
         {isStaff && (
           <div>
-            <label htmlFor="lead-assignee" className={label}>Assigned to</label>
-            <select id="lead-assignee" className={field} value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-              <option value="">Unassigned</option>
-              {assignees.map((a) => <option key={a.id} value={a.id}>{assigneeName(a)} ({a.role})</option>)}
-            </select>
+            <span className={label}>Assigned to</span>
+            <AssigneePicker value={assignedTo} onChange={setAssignedTo} />
           </div>
         )}
         <div>
